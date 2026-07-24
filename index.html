@@ -343,7 +343,7 @@
             'DC': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 10 H 21 M 3 15 H 7 M 10 15 H 14 M 17 15 H 21" stroke-linecap="round"/></svg>`
         };
 
-        // Hilsfunktion für +/- Buttons an Zahlenfeldern unter Berücksichtigung des step-Attributs
+        // Hilfsfunktion für +/- Buttons an Zahlenfeldern unter Berücksichtigung des step-Attributs
         function stepInput(id, direction) {
             const input = document.getElementById(id);
             if (!input) return;
@@ -421,6 +421,23 @@
 
             document.getElementById('sweepLoop').addEventListener('change', (e) => {
                 localStorage.setItem('hp33120a_sweepLoop', e.target.checked);
+            });
+
+            // Enter-Taste Events für Frequenz, Amplitude und DC Offset hinzufügen
+            document.getElementById('freqVal').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    sendFrequency();
+                }
+            });
+            document.getElementById('voltVal').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    sendAmplitude();
+                }
+            });
+            document.getElementById('offsetVal').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    sendOffset();
+                }
             });
 
             rebuildPresetUI();
