@@ -1,514 +1,723 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HP 33120A Web Control</title>
-  <style>
-    :root {
-      --bg-dim: #121318;
-      --bg-card: #1e2029;
-      --bg-input: #282a36;
-      --border: #383a4c;
-      --primary: #4f46e5;
-      --primary-hover: #6366f1;
-      --success: #10b981;
-      --danger: #ef4444;
-      --text: #f8f8f2;
-      --text-muted: #9ca3af;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg-dim);
-      color: var(--text);
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 900px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    header {
-      background: var(--bg-card);
-      padding: 16px 24px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.875rem;
-      color: var(--text-muted);
-    }
-
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background-color: var(--danger);
-    }
-
-    .status-dot.connected {
-      background-color: var(--success);
-    }
-
-    button {
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: background-color 0.2s, transform 0.1s;
-    }
-
-    button:hover {
-      background-color: var(--primary-hover);
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    button.btn-disconnect {
-      background-color: var(--danger);
-    }
-
-    .card {
-      background: var(--bg-card);
-      padding: 20px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-    }
-
-    .card h2 {
-      font-size: 1.1rem;
-      margin-bottom: 16px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    /* Waveform Selector */
-    .wave-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .wave-btn {
-      background-color: var(--bg-input);
-      border: 1px solid var(--border);
-      color: var(--text);
-      flex-direction: column;
-      padding: 12px;
-      font-size: 0.85rem;
-    }
-
-    .wave-btn.active {
-      border-color: var(--primary);
-      background-color: rgba(79, 70, 229, 0.2);
-    }
-
-    .wave-icon {
-      width: 28px;
-      height: 28px;
-      stroke: currentColor;
-    }
-
-    /* Parameter Controls */
-    .controls-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .form-group label {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-
-    .input-group {
-      display: flex;
-      gap: 8px;
-    }
-
-    input, select {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 1rem;
-      width: 100%;
-    }
-
-    input:focus, select:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    /* Presets Grid */
-    .preset-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-    }
-
-    .preset-btn {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      justify-content: flex-start;
-      padding: 12px;
-      font-size: 0.9rem;
-      font-weight: 500;
-    }
-
-    .preset-btn:hover {
-      border-color: var(--primary);
-    }
-
-    /* Terminal Console */
-    .terminal {
-      background-color: #0d0e11;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      font-family: "Courier New", Courier, monospace;
-      font-size: 0.85rem;
-      height: 160px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .log-tx { color: #60a5fa; }
-    .log-rx { color: #34d399; }
-    .log-err { color: #f87171; }
-    .log-info { color: #9ca3af; }
-  </style>
-</head>
-<body>
-
-<div class="container">
-  <!-- Header & Connection -->
-  <header>
-    <div>
-      <h1>HP 33120A Control</h1>
-      <div class="status-badge">
-        <span id="statusDot" class="status-dot"></span>
-        <span id="statusText">Nicht verbunden</span>
-      </div>
-    </div>
-    <button id="connectBtn" onclick="toggleConnect()">Verbinden</button>
-  </header>
-
-  <!-- Manual Waveform & Parameter Controls -->
-  <section class="card">
-    <h2>Signalform & Parameter</h2>
-
-    <div class="wave-grid">
-      <button class="wave-btn active" onclick="setWaveform('SIN')" id="wave-SIN">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 2 12 C 5 4, 7 4, 10 12 C 13 20, 15 20, 18 12 C 19.5 8, 20.5 8, 22 12" /></svg>
-        Sinus
-      </button>
-      <button class="wave-btn" onclick="setWaveform('SQU')" id="wave-SQU">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 17 V 7 H 9 V 17 H 15 V 7 H 21 V 17" /></svg>
-        Rechteck
-      </button>
-      <button class="wave-btn" onclick="setWaveform('TRI')" id="wave-TRI">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 17 L 7.5 7 L 12 17 L 16.5 7 L 21 17" /></svg>
-        Dreieck
-      </button>
-      <button class="wave-btn" onclick="setWaveform('RAMP')" id="wave-RAMP">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 17 L 11 7 V 17 L 19 7 V 17" /></svg>
-        Sägezahn
-      </button>
-      <button class="wave-btn" onclick="setWaveform('NOIS')" id="wave-NOIS">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 12 L 5 7 L 7 16 L 9 8 L 11 15 L 13 6 L 15 17 L 17 9 L 19 14 L 21 12" /></svg>
-        Rauschen
-      </button>
-      <button class="wave-btn" onclick="setWaveform('DC')" id="wave-DC">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 9 H 21" /><path d="M 3 15 H 7 M 10 15 H 14 M 17 15 H 21" /></svg>
-        DC
-      </button>
-    </div>
-
-    <div class="controls-grid">
-      <div class="form-group">
-        <label for="freqInput">Frequenz</label>
-        <div class="input-group">
-          <input type="number" id="freqInput" value="1000" step="any" min="0.0001">
-          <select id="freqUnit" style="width: 90px;">
-            <option value="1">Hz</option>
-            <option value="1000" selected>kHz</option>
-            <option value="1000000">MHz</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="ampInput">Amplitude (Vpp)</label>
-        <input type="number" id="ampInput" value="1.0" step="0.1" min="0.05" max="10">
-      </div>
-
-      <div class="form-group">
-        <label for="offsetInput">Offset (V)</label>
-        <input type="number" id="offsetInput" value="0.0" step="0.1" min="-5" max="5">
-      </div>
-    </div>
-
-    <button onclick="applyManualSettings()" style="width: 100%; justify-content: center;">
-      Parameter Anwenden
-    </button>
-  </section>
-
-  <!-- Presets -->
-  <section class="card">
-    <h2>Presets</h2>
-    <div class="preset-grid">
-      <button class="preset-btn" onclick="applyPreset('SIN', 1000, 1.0, 0)">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 2 12 C 5 4, 7 4, 10 12 C 13 20, 15 20, 18 12 C 19.5 8, 20.5 8, 22 12" /></svg>
-        <span>1 kHz Sinus 1Vpp</span>
-      </button>
-
-      <button class="preset-btn" onclick="applyPreset('SQU', 10000, 3.3, 1.65)">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 17 V 7 H 9 V 17 H 15 V 7 H 21 V 17" /></svg>
-        <span>10 kHz Rechteck 3.3V</span>
-      </button>
-
-      <button class="preset-btn" onclick="applyPreset('TRI', 500, 2.0, 0)">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 17 L 7.5 7 L 12 17 L 16.5 7 L 21 17" /></svg>
-        <span>500 Hz Dreieck 2Vpp</span>
-      </button>
-
-      <button class="preset-btn" onclick="applyPreset('DC', 0, 0, 2.5)">
-        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 9 H 21" /><path d="M 3 15 H 7 M 10 15 H 14 M 17 15 H 21" /></svg>
-        <span>2.5 V DC Offset</span>
-      </button>
-    </div>
-  </section>
-
-  <!-- Terminal / Log Output -->
-  <section class="card">
-    <h2>Serieller Monitor (SCPI Log)</h2>
-    <div class="terminal" id="terminal"></div>
-  </section>
-</div>
-
-<script>
-  let port = null;
-  let writer = null;
-  let reader = null;
-  let keepReading = false;
-  let selectedWave = 'SIN';
-
-  // SCPI Generator Commands Mapping
-  const SCPI_WAVE_MAP = {
-    'SIN': 'SIN',
-    'SQU': 'SQU',
-    'TRI': 'TRI',
-    'RAMP': 'RAMP',
-    'NOIS': 'NOIS',
-    'DC': 'DC'
-  };
-
-  // Helper for Logging
-  function log(text, type = 'info') {
-    const term = document.getElementById('terminal');
-    const line = document.createElement('div');
-    line.className = `log-${type}`;
-    const time = new Date().toLocaleTimeString();
-    line.textContent = `[${time}] ${text}`;
-    term.appendChild(line);
-    term.scrollTop = term.scrollHeight;
-  }
-
-  // Check Web Serial API support
-  if (!("serial" in navigator)) {
-    alert("Web Serial API wird von diesem Browser nicht unterstützt. Bitte nutze Google Chrome, Microsoft Edge oder Opera.");
-  }
-
-  // Serial Connect / Disconnect
-  async function toggleConnect() {
-    if (port) {
-      await disconnect();
-    } else {
-      await connect();
-    }
-  }
-
-  async function connect() {
-    try {
-      port = await navigator.serial.requestPort();
-      // HP 33120A Default RS-232 Settings: 9600 Baud, 8 Data Bits, 2 Stop Bits (or 1)
-      await port.open({ baudRate: 9600, stopBits: 2 });
-
-      document.getElementById('statusDot').classList.add('connected');
-      document.getElementById('statusText').textContent = "Verbunden";
-      document.getElementById('connectBtn').textContent = "Trennen";
-      document.getElementById('connectBtn').classList.add('btn-disconnect');
-
-      log("Serielle Verbindung hergestellt (9600 Baud).", "info");
-
-      // TextEncoder setup
-      const textEncoder = new TextEncoderStream();
-      textEncoder.readable.pipeTo(port.writable);
-      writer = textEncoder.writable.getWriter();
-
-      // Read Loop
-      keepReading = true;
-      readLoop();
-
-      // Send Identification Query
-      await sendSCPI("*IDN?");
-
-    } catch (err) {
-      log("Fehler beim Verbinden: " + err.message, "err");
-      await disconnect();
-    }
-  }
-
-  async function disconnect() {
-    keepReading = false;
-    if (reader) {
-      try { await reader.cancel(); } catch (e) {}
-    }
-    if (writer) {
-      try { await writer.close(); } catch (e) {}
-    }
-    if (port) {
-      try { await port.close(); } catch (e) {}
-    }
-
-    port = null;
-    writer = null;
-    reader = null;
-
-    document.getElementById('statusDot').classList.remove('connected');
-    document.getElementById('statusText').textContent = "Nicht verbunden";
-    document.getElementById('connectBtn').textContent = "Verbinden";
-    document.getElementById('connectBtn').classList.remove('btn-disconnect');
-
-    log("Verbindung getrennt.", "info");
-  }
-
-  async function readLoop() {
-    while (port && port.readable && keepReading) {
-      const textDecoder = new TextDecoderStream();
-      const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-      reader = textDecoder.readable.getReader();
-
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          if (value) {
-            log("RX: " + value.trim(), "rx");
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HP 33120A Remote Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
         }
-      } catch (err) {
-        log("Lesefehler: " + err.message, "err");
-      } finally {
-        reader.releaseLock();
-      }
-    }
-  }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen p-6 transition-colors duration-200">
 
-  // Send SCPI Command
-  async function sendSCPI(cmd) {
-    if (!writer) {
-      log("Fehler: Nicht verbunden! Befehl ignoriert: " + cmd, "err");
-      return;
-    }
-    try {
-      log("TX: " + cmd, "tx");
-      // HP 33120A expects commands terminated with \r\n or \n
-      await writer.write(cmd + "\r\n");
-    } catch (err) {
-      log("Sendefehler: " + err.message, "err");
-    }
-  }
+    <div class="max-w-5xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-center border-b border-slate-200 dark:border-gray-700 pb-4 gap-4">
+            <h1 class="text-2xl font-bold tracking-wide text-emerald-600 dark:text-emerald-400">HP 33120A Controller</h1>
+            <div class="flex items-center gap-3">
+                <button id="themeToggleBtn" onclick="toggleTheme()" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer">
+                    ☀️ Light Mode
+                </button>
+                <div id="statusBadge" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30">
+                    Getrennt
+                </div>
+            </div>
+        </header>
 
-  // UI Waveform Handler
-  function setWaveform(type) {
-    selectedWave = type;
-    document.querySelectorAll('.wave-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(`wave-${type}`).classList.add('active');
-  }
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Spalte 1: RS-232 Einstellungen -->
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-slate-200 dark:border-gray-700 space-y-4 shadow-sm h-fit">
+                <h2 class="text-lg font-semibold text-slate-700 dark:text-gray-300">Schnittstelle</h2>
+                
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <label class="block text-slate-500 dark:text-gray-400 mb-1">Baudrate</label>
+                        <select id="baudRate" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+                            <option value="300">300</option>
+                            <option value="1200">1200</option>
+                            <option value="2400">2400</option>
+                            <option value="4800">4800</option>
+                            <option value="9600" selected>9600 (Standard)</option>
+                        </select>
+                    </div>
 
-  // Apply Manual Controls
-  async function applyManualSettings() {
-    const rawFreq = parseFloat(document.getElementById('freqInput').value);
-    const unitMult = parseFloat(document.getElementById('freqUnit').value);
-    const freqHz = rawFreq * unitMult;
+                    <div>
+                        <label class="block text-slate-500 dark:text-gray-400 mb-1">Parität</label>
+                        <select id="parity" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+                            <option value="none" selected>None (8N1/8N2)</option>
+                            <option value="even">Even (7E1/7E2)</option>
+                            <option value="odd">Odd (7O1/7O2)</option>
+                        </select>
+                    </div>
 
-    const amp = parseFloat(document.getElementById('ampInput').value);
-    const offset = parseFloat(document.getElementById('offsetInput').value);
+                    <div>
+                        <label class="block text-slate-500 dark:text-gray-400 mb-1">Datenbits</label>
+                        <select id="dataBits" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+                            <option value="8" selected>8</option>
+                            <option value="7">7</option>
+                        </select>
+                    </div>
 
-    await sendSCPI(`FUNC ${SCPI_WAVE_MAP[selectedWave]}`);
+                    <div>
+                        <label class="block text-slate-500 dark:text-gray-400 mb-1">Stopbits</label>
+                        <select id="stopBits" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+                            <option value="1">1</option>
+                            <option value="2" selected>2 (HP Default)</option>
+                        </select>
+                    </div>
 
-    if (selectedWave !== 'DC') {
-      await sendSCPI(`FREQ ${freqHz}`);
-      await sendSCPI(`VOLT ${amp}`);
-    }
-    await sendSCPI(`VOLT:OFFS ${offset}`);
-  }
+                    <div>
+                        <label class="block text-slate-500 dark:text-gray-400 mb-1">Flusssteuerung</label>
+                        <select id="flowControl" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+                            <option value="none">Keine</option>
+                            <option value="hardware" selected>Hardware (DTR/DSR)</option>
+                        </select>
+                    </div>
+                </div>
 
-  // Apply Presets
-  async function applyPreset(wave, freqHz, ampV, offsetV) {
-    setWaveform(wave);
+                <div class="pt-2">
+                    <button id="btnConnect" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded transition-colors shadow-lg shadow-emerald-900/10 dark:shadow-emerald-900/20 cursor-pointer">
+                        Verbindung herstellen
+                    </button>
+                    <button id="btnChangePort" class="w-full mt-2 text-xs text-slate-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-colors cursor-pointer hidden font-medium">
+                        Anderen Port wählen
+                    </button>
+                </div>
+            </div>
 
-    // Update UI Controls
-    if (freqHz >= 1000000) {
-      document.getElementById('freqInput').value = freqHz / 1000000;
-      document.getElementById('freqUnit').value = "1000000";
-    } else if (freqHz >= 1000) {
-      document.getElementById('freqInput').value = freqHz / 1000;
-      document.getElementById('freqUnit').value = "1000";
-    } else {
-      document.getElementById('freqInput').value = freqHz;
-      document.getElementById('freqUnit').value = "1";
-    }
+            <!-- Spalte 2 & 3: Generator Steuerung -->
+            <div class="md:col-span-2 space-y-6">
+                
+                <!-- Signalform (Waveform) - Kompakte Buttons mit SVG Icons -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
+                    <h2 class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-2.5">Signalform (Waveform)</h2>
+                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        
+                        <!-- Sinus -->
+                        <button data-type="SIN" onclick="setWaveform('SIN')" class="waveform-btn flex flex-col items-center justify-center p-2 rounded transition-all active:scale-95 cursor-pointer text-xs font-medium border border-slate-300 dark:border-gray-600">
+                            <svg class="w-6 h-6 stroke-current fill-none mb-1" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 12 C 6 4, 9 4, 12 12 C 15 20, 18 20, 21 12" stroke-linecap="round"/></svg>
+                            <span>Sinus</span>
+                        </button>
 
-    document.getElementById('ampInput').value = ampV;
-    document.getElementById('offsetInput').value = offsetV;
+                        <!-- Rechteck -->
+                        <button data-type="SQU" onclick="setWaveform('SQU')" class="waveform-btn flex flex-col items-center justify-center p-2 rounded transition-all active:scale-95 cursor-pointer text-xs font-medium border border-slate-300 dark:border-gray-600">
+                            <svg class="w-6 h-6 stroke-current fill-none mb-1" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 16 V 8 H 10 V 16 H 17 V 8 H 21" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <span>Rechteck</span>
+                        </button>
 
-    // Send Commands
-    await applyManualSettings();
-  }
-</script>
+                        <!-- Dreieck -->
+                        <button data-type="TRI" onclick="setWaveform('TRI')" class="waveform-btn flex flex-col items-center justify-center p-2 rounded transition-all active:scale-95 cursor-pointer text-xs font-medium border border-slate-300 dark:border-gray-600">
+                            <svg class="w-6 h-6 stroke-current fill-none mb-1" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 16 L 9 8 L 15 16 L 21 8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <span>Dreieck</span>
+                        </button>
 
+                        <!-- Rampe -->
+                        <button data-type="RAMP" onclick="setWaveform('RAMP')" class="waveform-btn flex flex-col items-center justify-center p-2 rounded transition-all active:scale-95 cursor-pointer text-xs font-medium border border-slate-300 dark:border-gray-600">
+                            <svg class="w-6 h-6 stroke-current fill-none mb-1" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 16 L 11 8 V 16 L 19 8 V 16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <span>Rampe</span>
+                        </button>
+
+                        <!-- Rauschen -->
+                        <button data-type="NOIS" onclick="setWaveform('NOIS')" class="waveform-btn flex flex-col items-center justify-center p-2 rounded transition-all active:scale-95 cursor-pointer text-xs font-medium border border-slate-300 dark:border-gray-600">
+                            <svg class="w-6 h-6 stroke-current fill-none mb-1" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 12 L 5 8 L 7 15 L 9 6 L 11 16 L 13 7 L 15 14 L 17 9 L 19 13 L 21 11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <span>Rauschen</span>
+                        </button>
+
+                        <!-- DC -->
+                        <button data-type="DC" onclick="setWaveform('DC')" class="waveform-btn flex flex-col items-center justify-center p-2 rounded transition-all active:scale-95 cursor-pointer text-xs font-medium border border-slate-300 dark:border-gray-600 text-orange-600 dark:text-orange-400">
+                            <svg class="w-6 h-6 stroke-current fill-none mb-1" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 10 H 21 M 3 15 H 7 M 10 15 H 14 M 17 15 H 21" stroke-linecap="round"/></svg>
+                            <span>DC Mode</span>
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- Software Sweep Bereich -->
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-slate-700 dark:text-gray-300">Software Frequenz-Sweep</h2>
+                        <span id="sweepStatusBadge" class="text-xs px-2.5 py-0.5 rounded font-semibold bg-slate-200 dark:bg-gray-700 text-slate-500 dark:text-gray-400">
+                            INAKTIV
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1">Startfrequenz (Hz)</label>
+                            <input type="number" id="sweepStart" value="100" step="any" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2.5 py-1.5 text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1">Stoppfrequenz (Hz)</label>
+                            <input type="number" id="sweepStop" value="10000" step="any" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2.5 py-1.5 text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1">Schrittweite (Hz)</label>
+                            <input type="number" id="sweepStep" value="500" step="any" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2.5 py-1.5 text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1">Pause (ms)</label>
+                            <input type="number" id="sweepDelay" value="200" min="50" step="10" class="w-full bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2.5 py-1.5 text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1">
+                        <label class="flex items-center gap-2 text-xs text-slate-600 dark:text-gray-300 cursor-pointer select-none">
+                            <input type="checkbox" id="sweepLoop" class="rounded text-emerald-600 focus:ring-emerald-500 dark:bg-gray-700 dark:border-gray-600">
+                            <span>Endlosschleife (Loop)</span>
+                        </label>
+
+                        <div class="flex gap-2">
+                            <button id="btnStartSweep" onclick="startSoftwareSweep()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors cursor-pointer">
+                                Sweep Starten
+                            </button>
+                            <button id="btnStopSweep" onclick="stopSoftwareSweep()" class="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors cursor-pointer hidden">
+                                Sweep Stoppen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voreinstellungen (Presets) -->
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-lg font-semibold text-slate-700 dark:text-gray-300">Voreinstellungen (Presets)</h2>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-slate-500 dark:text-gray-400">Anzahl:</span>
+                            <input type="number" id="presetCountInput" value="5" min="1" max="99" onchange="changePresetCount(this.value)" class="w-16 text-center bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-2 py-1 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-medium">
+                        </div>
+                    </div>
+                    <div id="presetContainer" class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                        <!-- Wird dynamisch befüllt -->
+                    </div>
+                </div>
+
+                <!-- Frequenz, Amplitude & DC Offset -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    
+                    <!-- Frequenz Block -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <h2 class="text-md font-semibold text-slate-700 dark:text-gray-300 mb-2">Frequenz (Hz)</h2>
+                            <input type="number" id="freqVal" value="1000" step="any" class="w-full bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded p-2 text-xl font-mono text-emerald-600 dark:text-emerald-400 text-center focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="mt-4 space-y-3">
+                            <div class="flex items-center justify-between text-xs text-slate-500 dark:text-gray-400">
+                                <label>Schritt (Hz):</label>
+                                <input type="number" id="freqStep" value="100" class="w-20 bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-1.5 py-0.5 text-right text-slate-900 dark:text-white">
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="adjustValue('freq', -1)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 py-2 rounded text-lg font-bold cursor-pointer text-slate-800 dark:text-gray-100">-</button>
+                                <button onclick="adjustValue('freq', 1)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 py-2 rounded text-lg font-bold cursor-pointer text-slate-800 dark:text-gray-100">+</button>
+                            </div>
+                            <button onclick="sendFrequency()" class="w-full bg-slate-100 dark:bg-gray-700 hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:text-white dark:hover:text-white text-xs py-1.5 rounded transition-colors font-medium text-slate-700 dark:text-gray-300 cursor-pointer">Setzen</button>
+                        </div>
+                    </div>
+
+                    <!-- Amplitude Block -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <h2 class="text-md font-semibold text-slate-700 dark:text-gray-300 mb-2">Amplitude (Vpp)</h2>
+                            <input type="number" id="voltVal" value="1.0" step="any" class="w-full bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded p-2 text-xl font-mono text-emerald-600 dark:text-emerald-400 text-center focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="mt-4 space-y-3">
+                            <div class="flex items-center justify-between text-xs text-slate-500 dark:text-gray-400">
+                                <label>Schritt (V):</label>
+                                <input type="number" id="voltStep" value="0.1" step="any" class="w-20 bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-1.5 py-0.5 text-right text-slate-900 dark:text-white">
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="adjustValue('volt', -1)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 py-2 rounded text-lg font-bold cursor-pointer text-slate-800 dark:text-gray-100">-</button>
+                                <button onclick="adjustValue('volt', 1)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 py-2 rounded text-lg font-bold cursor-pointer text-slate-800 dark:text-gray-100">+</button>
+                            </div>
+                            <button onclick="sendAmplitude()" class="w-full bg-slate-100 dark:bg-gray-700 hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:text-white dark:hover:text-white text-xs py-1.5 rounded transition-colors font-medium text-slate-700 dark:text-gray-300 cursor-pointer">Setzen</button>
+                        </div>
+                    </div>
+
+                    <!-- DC Offset Block -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <h2 class="text-md font-semibold text-slate-700 dark:text-gray-300 mb-2">DC Offset (V)</h2>
+                            <input type="number" id="offsetVal" value="0.0" step="any" class="w-full bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded p-2 text-xl font-mono text-emerald-600 dark:text-emerald-400 text-center focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="mt-4 space-y-3">
+                            <div class="flex items-center justify-between text-xs text-slate-500 dark:text-gray-400">
+                                <label>Schritt (V):</label>
+                                <input type="number" id="offsetStep" value="0.1" step="any" class="w-20 bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded px-1.5 py-0.5 text-right text-slate-900 dark:text-white">
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="adjustValue('offset', -1)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 py-2 rounded text-lg font-bold cursor-pointer text-slate-800 dark:text-gray-100">-</button>
+                                <button onclick="adjustValue('offset', 1)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 py-2 rounded text-lg font-bold cursor-pointer text-slate-800 dark:text-gray-100">+</button>
+                            </div>
+                            <button onclick="sendOffset()" class="w-full bg-slate-100 dark:bg-gray-700 hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:text-white dark:hover:text-white text-xs py-1.5 rounded transition-colors font-medium text-slate-700 dark:text-gray-300 cursor-pointer">Setzen</button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Konsolen-Log für SCPI Befehle -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
+                    <div class="text-xs font-semibold text-slate-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Gesendete SCPI Befehle</div>
+                    <div id="cmdLog" class="font-mono text-xs text-slate-600 dark:text-gray-400 max-h-24 overflow-y-auto space-y-0.5 bg-slate-100 dark:bg-gray-900 p-2 rounded border border-slate-200 dark:border-gray-700">
+                        <!-- Log-Einträge landen hier -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let port = null;
+        let writer = null;
+        let currentWaveform = 'SIN';
+        let presetCount = 5;
+        let isSweeping = false;
+
+        const STORAGE_KEYS = [
+            'baudRate', 'parity', 'dataBits', 'stopBits', 'flowControl', 
+            'freqVal', 'freqStep', 'voltVal', 'voltStep', 'offsetVal', 'offsetStep',
+            'sweepStart', 'sweepStop', 'sweepStep', 'sweepDelay'
+        ];
+        
+        const WAVE_NAMES = { 
+            'SIN': 'Sinus', 
+            'SQU': 'Rechteck', 
+            'TRI': 'Dreieck', 
+            'RAMP': 'Rampe', 
+            'NOIS': 'Rauschen', 
+            'DC': 'DC' 
+        };
+
+        const WAVE_ICONS = {
+            'SIN': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 12 C 6 4, 9 4, 12 12 C 15 20, 18 20, 21 12" stroke-linecap="round"/></svg>`,
+            'SQU': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 16 V 8 H 10 V 16 H 17 V 8 H 21" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            'TRI': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 16 L 9 8 L 15 16 L 21 8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            'RAMP': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 16 L 11 8 V 16 L 19 8 V 16" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            'NOIS': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 12 L 5 8 L 7 15 L 9 6 L 11 16 L 13 7 L 15 14 L 17 9 L 19 13 L 21 11" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            'DC': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 10 H 21 M 3 15 H 7 M 10 15 H 14 M 17 15 H 21" stroke-linecap="round"/></svg>`
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!("serial" in navigator)) {
+                alert("Dein Browser unterstützt die Web Serial API nicht. Bitte nutze Google Chrome, Microsoft Edge oder Opera.");
+                document.getElementById('btnConnect').disabled = true;
+                return;
+            }
+
+            navigator.serial.getPorts().then(ports => {
+                if (ports.length > 0) {
+                    document.getElementById('btnChangePort').classList.remove('hidden');
+                }
+            });
+
+            const savedTheme = localStorage.getItem('hp33120a_theme') || 'dark';
+            applyTheme(savedTheme);
+
+            const savedPresetCount = localStorage.getItem('hp33120a_presetCount');
+            if (savedPresetCount) {
+                let parsed = parseInt(savedPresetCount, 10);
+                if (!isNaN(parsed) && parsed > 0) {
+                    presetCount = parsed;
+                }
+            }
+            document.getElementById('presetCountInput').value = presetCount;
+
+            STORAGE_KEYS.forEach(key => {
+                const savedValue = localStorage.getItem('hp33120a_' + key);
+                if (savedValue !== null) {
+                    document.getElementById(key).value = savedValue;
+                }
+            });
+
+            const savedLoop = localStorage.getItem('hp33120a_sweepLoop');
+            if (savedLoop !== null) {
+                document.getElementById('sweepLoop').checked = (savedLoop === 'true');
+            }
+
+            const savedWave = localStorage.getItem('hp33120a_currentWaveform');
+            if (savedWave) {
+                setWaveform(savedWave, true);
+            } else {
+                setWaveform('SIN', true);
+            }
+
+            STORAGE_KEYS.forEach(key => {
+                document.getElementById(key).addEventListener('input', () => {
+                    localStorage.setItem('hp33120a_' + key, document.getElementById(key).value);
+                });
+            });
+
+            document.getElementById('sweepLoop').addEventListener('change', (e) => {
+                localStorage.setItem('hp33120a_sweepLoop', e.target.checked);
+            });
+
+            rebuildPresetUI();
+        });
+
+        // --- THEME LOGIK ---
+        function toggleTheme() {
+            const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            const newMode = currentMode === 'dark' ? 'light' : 'dark';
+            applyTheme(newMode);
+        }
+
+        function applyTheme(mode) {
+            const btn = document.getElementById('themeToggleBtn');
+            if (mode === 'dark') {
+                document.documentElement.classList.add('dark');
+                btn.innerHTML = '☀️ Light Mode';
+                localStorage.setItem('hp33120a_theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                btn.innerHTML = '🌙 Dark Mode';
+                localStorage.setItem('hp33120a_theme', 'light');
+            }
+        }
+
+        // --- WEB SERIAL & STEUERUNG ---
+        document.getElementById('btnConnect').addEventListener('click', async () => {
+            if (port) {
+                await disconnect();
+                return;
+            }
+            await connectSerial(false);
+        });
+
+        document.getElementById('btnChangePort').addEventListener('click', async () => {
+            await connectSerial(true);
+        });
+
+        async function connectSerial(forcePrompt) {
+            try {
+                const options = {
+                    baudRate: parseInt(document.getElementById('baudRate').value),
+                    dataBits: parseInt(document.getElementById('dataBits').value),
+                    stopBits: parseInt(document.getElementById('stopBits').value),
+                    parity: document.getElementById('parity').value,
+                    flowControl: document.getElementById('flowControl').value
+                };
+
+                if (forcePrompt) {
+                    port = await navigator.serial.requestPort();
+                } else {
+                    const ports = await navigator.serial.getPorts();
+                    if (ports.length > 0) {
+                        port = ports[0];
+                    } else {
+                        port = await navigator.serial.requestPort();
+                    }
+                }
+
+                try {
+                    await port.open(options);
+                } catch (openErr) {
+                    if (!forcePrompt && openErr.name !== 'NotFoundError') {
+                        console.warn("Gemerkter Port konnte nicht geöffnet werden, frage nach neuem...", openErr);
+                        port = await navigator.serial.requestPort();
+                        await port.open(options);
+                    } else {
+                        throw openErr;
+                    }
+                }
+
+                writer = port.writable.getWriter();
+                
+                updateStatus(true);
+                await sendCommand("SYST:REM");
+                
+                setWaveform(currentWaveform);
+                sendFrequency();
+                sendAmplitude();
+                sendOffset();
+                
+            } catch (error) {
+                console.error("Verbindungsfehler:", error);
+                if (error.name !== 'NotFoundError') { 
+                    alert("Verbindung fehlgeschlagen: " + error.message);
+                }
+                port = null;
+                updateStatus(false);
+            }
+        }
+
+        async function disconnect() {
+            if (isSweeping) {
+                stopSoftwareSweep();
+            }
+            if (writer) {
+                writer.releaseLock();
+                writer = null;
+            }
+            if (port) {
+                await port.close();
+                port = null;
+            }
+            updateStatus(false);
+        }
+
+        function updateStatus(isConnected) {
+            const badge = document.getElementById('statusBadge');
+            const btn = document.getElementById('btnConnect');
+            const changeBtn = document.getElementById('btnChangePort');
+
+            if (isConnected) {
+                badge.textContent = "Verbunden";
+                badge.className = "px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
+                btn.textContent = "Verbindung trennen";
+                btn.className = "w-full bg-red-600 hover:bg-red-500 text-white font-medium py-2 rounded transition-colors cursor-pointer";
+                changeBtn.classList.add('hidden');
+            } else {
+                badge.textContent = "Getrennt";
+                badge.className = "px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30";
+                btn.textContent = "Verbindung herstellen";
+                btn.className = "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded transition-colors shadow-lg shadow-emerald-900/10 dark:shadow-emerald-900/20 cursor-pointer";
+                
+                navigator.serial.getPorts().then(ports => {
+                    if (ports.length > 0) {
+                        changeBtn.classList.remove('hidden');
+                    }
+                });
+            }
+        }
+
+        async function sendCommand(scpiCmd) {
+            if (!writer) {
+                logToConsole("Ignoriert (Nicht verbunden): " + scpiCmd);
+                return;
+            }
+            try {
+                const encoder = new TextEncoder();
+                await writer.write(encoder.encode(scpiCmd + "\n"));
+                logToConsole(scpiCmd);
+            } catch (error) {
+                console.error("Fehler beim Senden:", error);
+                logToConsole("FEHLER bei: " + scpiCmd);
+            }
+        }
+
+        function setWaveform(type, silent = false) {
+            currentWaveform = type;
+            localStorage.setItem('hp33120a_currentWaveform', type);
+
+            const baseClass = "waveform-btn flex flex-col items-center justify-center p-2 rounded transition-all active:scale-95 cursor-pointer text-xs font-medium border";
+
+            document.querySelectorAll('.waveform-btn').forEach(btn => {
+                if (btn.dataset.type === type) {
+                    btn.className = `${baseClass} bg-emerald-600/10 text-emerald-600 border-emerald-500 dark:bg-emerald-600/20 dark:text-emerald-400 font-bold shadow-sm`;
+                } else {
+                    const dcExtra = btn.dataset.type === 'DC' ? ' text-orange-600 dark:text-orange-400 font-bold' : ' text-slate-700 dark:text-gray-200';
+                    btn.className = `${baseClass} bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 border-slate-300 dark:border-gray-600${dcExtra}`;
+                }
+            });
+
+            if (!silent) {
+                sendCommand(`FUNC:SHAP ${type}`);
+            }
+        }
+
+        function sendFrequency() {
+            const val = document.getElementById('freqVal').value;
+            sendCommand(`FREQ ${val}`);
+        }
+
+        function sendAmplitude() {
+            const val = document.getElementById('voltVal').value;
+            sendCommand(`VOLT ${val}`);
+        }
+
+        function sendOffset() {
+            const val = document.getElementById('offsetVal').value;
+            sendCommand(`VOLT:OFFS ${val}`);
+        }
+
+        function adjustValue(type, dir) {
+            let valInput, stepInput, sendFn;
+            if (type === 'freq') {
+                valInput = document.getElementById('freqVal');
+                stepInput = document.getElementById('freqStep');
+                sendFn = sendFrequency;
+            } else if (type === 'volt') {
+                valInput = document.getElementById('voltVal');
+                stepInput = document.getElementById('voltStep');
+                sendFn = sendAmplitude;
+            } else if (type === 'offset') {
+                valInput = document.getElementById('offsetVal');
+                stepInput = document.getElementById('offsetStep');
+                sendFn = sendOffset;
+            }
+            if (!valInput || !stepInput) return;
+
+            let val = parseFloat(valInput.value) || 0;
+            let step = parseFloat(stepInput.value) || 0;
+            val += dir * step;
+            val = Math.round(val * 100000) / 100000; // Rundung gegen Floating Point Fehler
+            
+            if (val < 0 && type !== 'offset') val = 0;
+
+            valInput.value = val;
+            localStorage.setItem('hp33120a_' + valInput.id, val);
+            sendFn();
+        }
+
+        // --- SWEEP FUNKTIONALITÄT ---
+        async function startSoftwareSweep() {
+            if (isSweeping) return;
+
+            const start = parseFloat(document.getElementById('sweepStart').value);
+            const stop = parseFloat(document.getElementById('sweepStop').value);
+            const step = parseFloat(document.getElementById('sweepStep').value);
+            const delay = parseInt(document.getElementById('sweepDelay').value, 10);
+            const loop = document.getElementById('sweepLoop').checked;
+
+            if (isNaN(start) || isNaN(stop) || isNaN(step) || isNaN(delay) || step <= 0 || delay < 10) {
+                alert("Bitte gültige Werte für den Sweep eingeben!");
+                return;
+            }
+
+            isSweeping = true;
+            document.getElementById('sweepStatusBadge').textContent = "AKTIV";
+            document.getElementById('sweepStatusBadge').className = "text-xs px-2.5 py-0.5 rounded font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
+            document.getElementById('btnStartSweep').classList.add('hidden');
+            document.getElementById('btnStopSweep').classList.remove('hidden');
+
+            do {
+                let current = start;
+                if (start <= stop) {
+                    while (current <= stop && isSweeping) {
+                        document.getElementById('freqVal').value = current;
+                        sendFrequency();
+                        await new Promise(r => setTimeout(r, delay));
+                        current += step;
+                    }
+                } else {
+                    while (current >= stop && isSweeping) {
+                        document.getElementById('freqVal').value = current;
+                        sendFrequency();
+                        await new Promise(r => setTimeout(r, delay));
+                        current -= step;
+                    }
+                }
+            } while (loop && isSweeping);
+
+            stopSoftwareSweep();
+        }
+
+        function stopSoftwareSweep() {
+            isSweeping = false;
+            document.getElementById('sweepStatusBadge').textContent = "INAKTIV";
+            document.getElementById('sweepStatusBadge').className = "text-xs px-2.5 py-0.5 rounded font-semibold bg-slate-200 dark:bg-gray-700 text-slate-500 dark:text-gray-400";
+            document.getElementById('btnStartSweep').classList.remove('hidden');
+            document.getElementById('btnStopSweep').classList.add('hidden');
+        }
+
+        // --- LOG FUNKTION ---
+        function logToConsole(text) {
+            const cmdLog = document.getElementById('cmdLog');
+            const entry = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${text}`;
+            cmdLog.appendChild(entry);
+            cmdLog.scrollTop = cmdLog.scrollHeight;
+        }
+
+        // --- PRESETS LOGIK ---
+        function changePresetCount(val) {
+            let cnt = parseInt(val, 10);
+            if (isNaN(cnt) || cnt < 1) cnt = 1;
+            if (cnt > 99) cnt = 99;
+            presetCount = cnt;
+            localStorage.setItem('hp33120a_presetCount', presetCount);
+            rebuildPresetUI();
+        }
+
+        function getPresets() {
+            try {
+                return JSON.parse(localStorage.getItem('hp33120a_presets')) || {};
+            } catch(e) {
+                return {};
+            }
+        }
+
+        function savePreset(index) {
+            const presets = getPresets();
+            presets[index] = {
+                wave: currentWaveform,
+                freq: document.getElementById('freqVal').value,
+                volt: document.getElementById('voltVal').value,
+                offset: document.getElementById('offsetVal').value
+            };
+            localStorage.setItem('hp33120a_presets', JSON.stringify(presets));
+            rebuildPresetUI();
+        }
+
+        function loadPreset(index) {
+            const presets = getPresets();
+            const data = presets[index];
+            if (!data) return;
+
+            setWaveform(data.wave);
+            document.getElementById('freqVal').value = data.freq;
+            document.getElementById('voltVal').value = data.volt;
+            document.getElementById('offsetVal').value = data.offset;
+
+            localStorage.setItem('hp33120a_freqVal', data.freq);
+            localStorage.setItem('hp33120a_voltVal', data.volt);
+            localStorage.setItem('hp33120a_offsetVal', data.offset);
+
+            sendFrequency();
+            sendAmplitude();
+            sendOffset();
+        }
+
+        function rebuildPresetUI() {
+            const container = document.getElementById('presetContainer');
+            const presets = getPresets();
+            container.innerHTML = '';
+
+            for (let i = 0; i < presetCount; i++) {
+                const data = presets[i];
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 text-xs";
+                
+                let contentHtml = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="font-bold text-slate-400 dark:text-gray-500 w-5 shrink-0">#${i + 1}</span>
+                `;
+
+                if (data) {
+                    const iconSvg = WAVE_ICONS[data.wave] || '';
+                    const nameText = WAVE_NAMES[data.wave] || data.wave;
+                    contentHtml += `
+                        <div class="flex items-center gap-2 font-mono text-slate-700 dark:text-gray-200 truncate">
+                            <span class="text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0" title="${nameText}">
+                                ${iconSvg}
+                            </span>
+                            <span>${data.freq} Hz</span>
+                            <span class="text-slate-400 dark:text-gray-600">|</span>
+                            <span>${data.volt} Vpp</span>
+                            <span class="text-slate-400 dark:text-gray-600">|</span>
+                            <span>${data.offset} V</span>
+                        </div>
+                    `;
+                } else {
+                    contentHtml += `<span class="text-slate-400 italic">Leer</span>`;
+                }
+
+                contentHtml += `
+                    </div>
+                    <div class="flex gap-1.5 shrink-0 ml-2">
+                        ${data ? `<button onclick="loadPreset(${i})" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium transition-colors cursor-pointer">Laden</button>` : ''}
+                        <button onclick="savePreset(${i})" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200 rounded font-medium transition-colors cursor-pointer">Speichern</button>
+                    </div>
+                `;
+
+                item.innerHTML = contentHtml;
+                container.appendChild(item);
+            }
+        }
+    </script>
 </body>
 </html>
