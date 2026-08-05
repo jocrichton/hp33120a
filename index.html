@@ -302,7 +302,10 @@
 
                 <!-- Konsolen-Log für SCPI Befehle -->
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
-                    <div class="text-xs font-semibold text-slate-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Gesendete SCPI Befehle</div>
+                    <div class="flex justify-between items-center mb-1">
+                        <div class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Gesendete SCPI Befehle</div>
+                        <button onclick="clearLog()" class="text-[10px] bg-slate-200 hover:bg-slate-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-600 dark:text-gray-300 px-2 py-0.5 rounded cursor-pointer transition-colors font-semibold">Leeren</button>
+                    </div>
                     <div id="cmdLog" class="font-mono text-xs text-slate-600 dark:text-gray-400 max-h-24 overflow-y-auto space-y-0.5 bg-slate-100 dark:bg-gray-900 p-2 rounded border border-slate-200 dark:border-gray-700">
                         <!-- Log-Einträge landen hier -->
                     </div>
@@ -699,7 +702,7 @@
             document.getElementById('btnStopSweep').classList.add('hidden');
         }
 
-        // --- LOG FUNKTION ---
+        // --- LOG FUNKTIONEN ---
         function logToConsole(text) {
             const cmdLog = document.getElementById('cmdLog');
             const entry = document.createElement('div');
@@ -709,7 +712,11 @@
             cmdLog.scrollTop = cmdLog.scrollHeight;
         }
 
-        // --- PRESETS LOGIK (Unverändert) ---
+        function clearLog() {
+            document.getElementById('cmdLog').innerHTML = '';
+        }
+
+        // --- PRESETS LOGIK ---
         function changePresetCount(val) {
             let cnt = parseInt(val, 10);
             if (isNaN(cnt) || cnt < 1) cnt = 1;
@@ -758,6 +765,15 @@
             sendOffset();
         }
 
+        function deletePreset(index) {
+            const presets = getPresets();
+            if (presets[index]) {
+                delete presets[index];
+                localStorage.setItem('hp33120a_presets', JSON.stringify(presets));
+                rebuildPresetUI();
+            }
+        }
+
         function rebuildPresetUI() {
             const container = document.getElementById('presetContainer');
             const presets = getPresets();
@@ -795,8 +811,9 @@
                 contentHtml += `
                     </div>
                     <div class="flex gap-1.5 shrink-0 ml-2">
-                        ${data ? `<button onclick="loadPreset(${i})" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium transition-colors cursor-pointer">Laden</button>` : ''}
-                        <button onclick="savePreset(${i})" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200 rounded font-medium transition-colors cursor-pointer">Speichern</button>
+                        ${data ? `<button onclick="loadPreset(${i})" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium transition-colors cursor-pointer">Laden</button>` : ''}
+                        <button onclick="savePreset(${i})" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200 rounded font-medium transition-colors cursor-pointer">Speichern</button>
+                        ${data ? `<button onclick="deletePreset(${i})" class="px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded font-bold transition-colors cursor-pointer" title="Preset löschen">✕</button>` : ''}
                     </div>
                 `;
 
