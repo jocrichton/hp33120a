@@ -53,8 +53,10 @@ function createWindow() {
     }));
 
     if (ports.length === 0) {
-      resolveSelection('');
-      return;
+      const li = document.createElement('li');
+      li.className = 'esp-hint';
+      li.textContent = 'Kein serieller Port gefunden.';
+      list.appendChild(li);
     }
 
     win.webContents.send('serial:ports', ports);
