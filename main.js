@@ -1,25 +1,16 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
 
-// --- Modulebene: lebt ueber den gesamten App-Lauf -------------------------
-
-// Callback aus dem select-serial-port-Event.
+// Callback aus dem select-serial-port-Event. Wird gesetzt, sobald der
+// Renderer requestPort() aufruft, und vom Auswahl-UI wieder aufgeloest.
 let pendingSelect = null;
-
-// portIds, die der Nutzer aktiv ausgewaehlt hat. Nur diese bekommen
-// Geraeteberechtigung - sonst liefert getPorts() alle COM-Ports des
-// Rechners zurueck und die UI verbindet sich stumm mit dem falschen.
-const granted = new Set();
 
 function resolveSelection(portId) {
   if (!pendingSelect) return;
   const cb = pendingSelect;
   pendingSelect = null;
-  if (portId) granted.add(portId);
   cb(portId || ''); // leerer String = Abbruch, requestPort() rejected
 }
-
-// --- Fenster -------------------------------------------------------------
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -33,8 +24,8 @@ function createWindow() {
     }
   });
 
-  // ses existiert NUR hier drin - alles was ses benutzt, gehoert
-  // ebenfalls in diese Funktion.
+  // ses existiert nur innerhalb dieser Funktion - alles was ses benutzt,
+  // gehoert ebenfalls hier hinein.
   const ses = win.webContents.session;
 
   // Electron zeigt keinen eigenen Portauswahl-Dialog. Ohne preventDefault
@@ -52,13 +43,8 @@ function createWindow() {
       serialNumber: p.serialNumber
     }));
 
-    if (ports.length === 0) {
-      const li = document.createElement('li');
-      li.className = 'esp-hint';
-      li.textContent = 'Kein serieller Port gefunden.';
-      list.appendChild(li);
-    }
-
+    // Auch die leere Liste wird geschickt, damit der Dialog "kein Port
+    // gefunden" anzeigen kann statt stumm abzubrechen.
     win.webContents.send('serial:ports', ports);
   });
 
@@ -69,18 +55,19 @@ function createWindow() {
     win.webContents.send('serial:changed', { type: 'removed', port });
   });
 
+  // Ohne diese beiden Handler liefert getPorts() eine leere Liste und
+  // requestPort() wirft einen SecurityError.
   ses.setPermissionCheckHandler((webContents, permission) => permission === 'serial');
   ses.setPermissionRequestHandler((webContents, permission, callback) => {
     callback(permission === 'serial');
   });
-  ses.setDevicePermissionHandler((details) =>
-    details.deviceType === 'serial' && granted.has(details.device.portId)
-  );
+
+  // Bewusst KEIN setDevicePermissionHandler: Electron merkt sich von
+  // selbst, welche Geraete ueber select-serial-port freigegeben wurden.
+  // Ein eigener Handler, der auf portId vergleicht, blockiert port.open().
 
   win.loadFile(path.join(__dirname, 'index.html'));
 }
-
-// --- IPC und App-Lifecycle ----------------------------------------------
 
 ipcMain.on('serial:select', (event, portId) => resolveSelection(portId));
 
