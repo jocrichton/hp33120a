@@ -5,12 +5,19 @@ const path = require('node:path');
 // Renderer requestPort() aufruft, und vom UI wieder aufgelöst.
 let pendingSelect = null;
 
+const granted = new Set();
+
 function resolveSelection(portId) {
   if (!pendingSelect) return;
   const cb = pendingSelect;
   pendingSelect = null;
-  cb(portId || ''); // leerer String = Abbruch, requestPort() rejected
+  if (portId) granted.add(portId);
+  cb(portId || '');
 }
+
+ses.setDevicePermissionHandler((details) =>
+  details.deviceType === 'serial' && granted.has(details.device.portId)
+);
 
 function createWindow() {
   const win = new BrowserWindow({
