@@ -20,7 +20,9 @@
       "main.js",
       "preload.js",
       "serial-picker.js",
-      "index.html"
+      "index.html",
+      "tailwind.js",
+      "build/icon.ico"
     ],
     "directories": {
       "output": "dist"

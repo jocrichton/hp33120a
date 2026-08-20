@@ -14,6 +14,12 @@ function resolveSelection(portId) {
 
 function createWindow() {
   const win = new BrowserWindow({
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#111827',        // gray-900, wie dein Body im Dark Mode
+      symbolColor: '#e5e7eb',
+      height: 40
+    },
     width: 1150,
     height: 850,
     autoHideMenuBar: true,
@@ -68,6 +74,14 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, 'index.html'));
 }
+
+ipcMain.on('theme:changed', (event, mode) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  win.setTitleBarOverlay(mode === 'dark'
+    ? { color: '#111827', symbolColor: '#e5e7eb', height: 40 }
+    : { color: '#f8fafc', symbolColor: '#0f172a', height: 40 });
+});
 
 ipcMain.on('serial:select', (event, portId) => resolveSelection(portId));
 

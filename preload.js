@@ -1,5 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+contextBridge.exposeInMainWorld('electronWindow', {
+  setTheme: (mode) => ipcRenderer.send('theme:changed', mode)
+});
+
 contextBridge.exposeInMainWorld('electronSerial', {
   // Wird aufgerufen, sobald der Main-Prozess eine Portliste anbietet.
   onPorts: (cb) => {
