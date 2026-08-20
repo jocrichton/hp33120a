@@ -18,7 +18,7 @@ function createWindow() {
     titleBarOverlay: {
       color: '#111827',        // gray-900, wie dein Body im Dark Mode
       symbolColor: '#e5e7eb',
-      height: 40
+      height: 32
     },
     width: 1150,
     height: 850,

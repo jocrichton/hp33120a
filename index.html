@@ -20,8 +20,24 @@
     input[type=number] {
       -moz-appearance: textfield;
     }
+
+    /* Native Elemente (Scrollbalken, aufgeklappte Selects) mitfaerben */
+    :root { color-scheme: light; }
+    :root.dark { color-scheme: dark; }
+
+    .dark ::-webkit-scrollbar { width: 10px; height: 10px; }
+    .dark ::-webkit-scrollbar-track { background: #111827; }
+    .dark ::-webkit-scrollbar-thumb { background: #374151; border-radius: 5px; }
+    .dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* Fenster am Header verschiebbar machen; Bedienelemente ausnehmen */
     header { -webkit-app-region: drag; }
-    header button, header input, header select, header div[id] { -webkit-app-region: no-drag; }
+    header button,
+    header input,
+    header select,
+    header div[id] { -webkit-app-region: no-drag; }
+
+    /* Platz fuer die Fensterknoepfe - nur in Electron */
     body.electron header { padding-right: 150px; }
   </style>
 </head>
@@ -30,40 +46,25 @@
   <div class="max-w-5xl mx-auto space-y-6">
 
     <!-- Header -->
-    <header class="flex flex-col sm:flex-row justify-between items-center border-b border-slate-200 dark:border-gray-700 pb-4 gap-4">
-      <h1 class="text-2xl font-bold tracking-wide text-emerald-600 dark:text-emerald-400">HP 33120A Controller</h1>
+    <header class="sticky top-0 z-30 -mx-6 px-6 pb-2 bg-slate-50 dark:bg-gray-900 flex items-center justify-between gap-3 border-b border-slate-200 dark:border-gray-700">
+      <h1 class="text-base font-semibold tracking-wide text-emerald-600 dark:text-emerald-400 whitespace-nowrap">HP 33120A</h1>
 
-      <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
+      <div class="flex items-center gap-1.5">
+        <button onclick="exportSettings()" title="Einstellungen exportieren" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded text-xs transition-colors cursor-pointer">&#128190;</button>
+        <button onclick="document.getElementById('importFile').click()" title="Einstellungen importieren" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded text-xs transition-colors cursor-pointer">&#128194;</button>
+        <input type="file" id="importFile" accept=".json" class="hidden" onchange="importSettings(event)">
 
-        <!-- Backup Tools -->
-        <div class="flex items-center gap-1 sm:border-r border-slate-300 dark:border-gray-600 sm:pr-3">
-          <button onclick="exportSettings()" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer" title="Einstellungen in eine Datei exportieren">
-            &#128190; Export
-          </button>
-          <button onclick="document.getElementById('importFile').click()" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer" title="Einstellungen aus einer Datei importieren">
-            &#128194; Import
-          </button>
-          <input type="file" id="importFile" accept=".json" class="hidden" onchange="importSettings(event)">
-        </div>
+        <button id="themeToggleBtn" onclick="toggleTheme()" title="Hell/Dunkel umschalten" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded text-xs transition-colors cursor-pointer">&#9728;&#65039;</button>
 
-        <button id="themeToggleBtn" onclick="toggleTheme()" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer">
-          &#9728;&#65039; Light Mode
+        <button id="btnToggleLog" onclick="toggleLogPanel(!logVisible)" class="px-2 py-1 rounded text-xs transition-colors cursor-pointer bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-200"></button>
+
+        <button id="btnSerialSettings" onclick="document.getElementById('serialDialog').showModal()" title="Serielle Schnittstelle konfigurieren" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded text-xs transition-colors cursor-pointer">&#9881;&#65039;</button>
+
+        <button id="btnConnect" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded text-xs transition-colors cursor-pointer whitespace-nowrap">
+          Verbinden
         </button>
 
-        <!-- Schnittstellen-Einstellungen (Dialog) -->
-        <button id="btnSerialSettings" onclick="document.getElementById('serialDialog').showModal()" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer" title="Serielle Schnittstelle konfigurieren">
-          &#9881;&#65039; Schnittstelle
-        </button>
-
-        <button id="btnConnect" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg text-sm transition-colors cursor-pointer">
-          Verbindung herstellen
-        </button>
-
-        <button id="btnChangePort" class="text-xs text-slate-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-colors cursor-pointer hidden font-medium">
-          Anderen Port wählen
-        </button>
-
-        <div id="statusBadge" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30">
+        <div id="statusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 whitespace-nowrap">
           Getrennt
         </div>
       </div>
@@ -255,7 +256,7 @@
       </div>
 
       <!-- Konsolen-Log für SCPI Befehle -->
-      <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
+      <div id="logPanel" class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
         <div class="flex justify-between items-center mb-1">
           <div class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Gesendete SCPI Befehle</div>
           <button onclick="clearLog()" class="text-[10px] bg-slate-200 hover:bg-slate-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-600 dark:text-gray-300 px-2 py-0.5 rounded cursor-pointer transition-colors font-semibold">Leeren</button>
@@ -323,8 +324,11 @@
         </div>
       </div>
 
-      <div class="text-right pt-1">
-        <button onclick="document.getElementById('serialDialog').close()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-sm font-medium transition-colors cursor-pointer">
+      <div class="flex items-center justify-between pt-1">
+        <button id="btnChangePort" class="text-xs text-slate-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-colors cursor-pointer hidden font-medium">
+          Anderen Port wählen
+        </button>
+        <button onclick="document.getElementById('serialDialog').close()" class="ml-auto px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-sm font-medium transition-colors cursor-pointer">
           Fertig
         </button>
       </div>
@@ -337,6 +341,7 @@
     let currentWaveform = 'SIN';
     let presetCount = 5;
     let isSweeping = false;
+    let logVisible = true;
 
     const STORAGE_KEYS = [
       'baudRate', 'parity', 'dataBits', 'stopBits', 'flowControl',
@@ -360,6 +365,11 @@
       'RAMP': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 16 L 11 8 V 16 L 19 8 V 16" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
       'NOIS': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 12 L 5 8 L 7 15 L 9 6 L 11 16 L 13 7 L 15 14 L 17 9 L 19 13 L 21 11" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
       'DC': `<svg class="w-5 h-5 stroke-current fill-none inline-block" viewBox="0 0 24 24" stroke-width="2"><path d="M 3 10 H 21 M 3 15 H 7 M 10 15 H 14 M 17 15 H 21" stroke-linecap="round"/></svg>`
+    };
+
+    const LOG_ICONS = {
+      on: `<svg class="w-4 h-4 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="2"><path d="M 4 17 L 9 12 L 4 7" stroke-linecap="round" stroke-linejoin="round"/><path d="M 12 17 H 20" stroke-linecap="round"/></svg>`,
+      off: `<svg class="w-4 h-4 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="2"><path d="M 4 17 L 9 12 L 4 7" stroke-linecap="round" stroke-linejoin="round"/><path d="M 12 17 H 20" stroke-linecap="round"/><path d="M 3 3 L 21 21" stroke-linecap="round"/></svg>`
     };
 
     // Hilfsfunktion für +/- Buttons
@@ -466,6 +476,10 @@
         document.getElementById('sweepLoop').checked = (savedLoop === 'true');
       }
 
+      const savedShowLog = localStorage.getItem('hp33120a_showLog');
+      const showLog = (savedShowLog === null) ? true : (savedShowLog === 'true');
+      toggleLogPanel(showLog);
+
       const savedWave = localStorage.getItem('hp33120a_currentWaveform');
       if (savedWave) {
         setWaveform(savedWave, true);
@@ -478,12 +492,13 @@
 
     // --- INITIALISIERUNG ---
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.electronWindow) document.body.classList.add('electron');
       if (!("serial" in navigator)) {
         alert("Dein Browser unterstützt die Web Serial API nicht. Bitte nutze Google Chrome, Microsoft Edge oder Opera.");
         document.getElementById('btnConnect').disabled = true;
         return;
       }
+
+      if (window.electronWindow) document.body.classList.add('electron');
 
       navigator.serial.getPorts().then(ports => {
         if (ports.length > 0) {
@@ -528,16 +543,15 @@
       const btn = document.getElementById('themeToggleBtn');
       if (mode === 'dark') {
         document.documentElement.classList.add('dark');
-        btn.innerHTML = '☀️ Light Mode';
+        btn.innerHTML = '☀️';
         localStorage.setItem('hp33120a_theme', 'dark');
       } else {
         document.documentElement.classList.remove('dark');
-        btn.innerHTML = '🌙 Dark Mode';
+        btn.innerHTML = '🌙';
         localStorage.setItem('hp33120a_theme', 'light');
       }
 
       window.electronWindow?.setTheme(mode);
-
     }
 
     // --- WEB SERIAL & STEUERUNG ---
@@ -628,16 +642,16 @@
 
       if (isConnected) {
         badge.textContent = "Verbunden";
-        badge.className = "px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
-        btn.textContent = "Verbindung trennen";
-        btn.className = "px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg text-sm transition-colors cursor-pointer";
+        badge.className = "px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap";
+        btn.textContent = "Trennen";
+        btn.className = "px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors cursor-pointer whitespace-nowrap";
         changeBtn.classList.add('hidden');
         hint.classList.remove('hidden');
       } else {
         badge.textContent = "Getrennt";
-        badge.className = "px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30";
-        btn.textContent = "Verbindung herstellen";
-        btn.className = "px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg text-sm transition-colors cursor-pointer";
+        badge.className = "px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 whitespace-nowrap";
+        btn.textContent = "Verbinden";
+        btn.className = "px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded text-xs transition-colors cursor-pointer whitespace-nowrap";
         hint.classList.add('hidden');
 
         navigator.serial.getPorts().then(ports => {
@@ -791,6 +805,22 @@
 
     function clearLog() {
       document.getElementById('cmdLog').innerHTML = '';
+    }
+
+    function toggleLogPanel(show) {
+      logVisible = show;
+      const btn = document.getElementById('btnToggleLog');
+      const base = "px-2 py-1 rounded text-xs transition-colors cursor-pointer";
+
+      document.getElementById('logPanel').classList.toggle('hidden', !show);
+
+      btn.innerHTML = show ? LOG_ICONS.on : LOG_ICONS.off;
+      btn.title = show ? 'SCPI-Log ausblenden' : 'SCPI-Log einblenden';
+      btn.className = show
+        ? `${base} bg-emerald-600/10 text-emerald-600 hover:bg-emerald-600/20 dark:bg-emerald-600/20 dark:text-emerald-400`
+        : `${base} bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-200`;
+
+      localStorage.setItem('hp33120a_showLog', show);
     }
 
     // --- PRESETS LOGIK ---
