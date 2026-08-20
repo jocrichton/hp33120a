@@ -1,0 +1,43 @@
+{
+  "name": "hp33120a",
+  "version": "1.0.0",
+  "description": "Web UI das WebSerial nutzt um einen HP 33120A per RS-232 fernzusteuern",
+  "main": "main.js",
+  "author": "jocrichton",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "latest",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "de.jocrichton.hp33120a",
+    "productName": "HP33120A Control",
+    "files": [
+      "main.js",
+      "preload.js",
+      "serial-picker.js",
+      "index.html"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "HP33120A-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "HP33120A-portable-${version}.${ext}"
+    }
+  }
+}
