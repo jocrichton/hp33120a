@@ -1,10 +1,14 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
 
-// Callback aus dem select-serial-port-Event; wird gefüllt, sobald der
-// Renderer requestPort() aufruft, und vom UI wieder aufgelöst.
+// --- Modulebene: lebt ueber den gesamten App-Lauf -------------------------
+
+// Callback aus dem select-serial-port-Event.
 let pendingSelect = null;
 
+// portIds, die der Nutzer aktiv ausgewaehlt hat. Nur diese bekommen
+// Geraeteberechtigung - sonst liefert getPorts() alle COM-Ports des
+// Rechners zurueck und die UI verbindet sich stumm mit dem falschen.
 const granted = new Set();
 
 function resolveSelection(portId) {
@@ -12,12 +16,10 @@ function resolveSelection(portId) {
   const cb = pendingSelect;
   pendingSelect = null;
   if (portId) granted.add(portId);
-  cb(portId || '');
+  cb(portId || ''); // leerer String = Abbruch, requestPort() rejected
 }
 
-ses.setDevicePermissionHandler((details) =>
-  details.deviceType === 'serial' && granted.has(details.device.portId)
-);
+// --- Fenster -------------------------------------------------------------
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -31,10 +33,12 @@ function createWindow() {
     }
   });
 
+  // ses existiert NUR hier drin - alles was ses benutzt, gehoert
+  // ebenfalls in diese Funktion.
   const ses = win.webContents.session;
 
-  // Kernstück: Electron zeigt KEINEN eigenen Portauswahl-Dialog.
-  // Ohne preventDefault + callback bleibt navigator.serial.requestPort() haengen.
+  // Electron zeigt keinen eigenen Portauswahl-Dialog. Ohne preventDefault
+  // plus callback bleibt navigator.serial.requestPort() haengen.
   ses.on('select-serial-port', (event, portList, webContents, callback) => {
     event.preventDefault();
     pendingSelect = callback;
@@ -56,8 +60,6 @@ function createWindow() {
     win.webContents.send('serial:ports', ports);
   });
 
-  // Wird der Adapter waehrend des offenen Dialogs eingesteckt, feuert
-  // select-serial-port erneut - das UI aktualisiert sich dadurch von selbst.
   ses.on('serial-port-added', (event, port) => {
     win.webContents.send('serial:changed', { type: 'added', port });
   });
@@ -65,16 +67,18 @@ function createWindow() {
     win.webContents.send('serial:changed', { type: 'removed', port });
   });
 
-  // Ohne diese drei Handler liefert getPorts() eine leere Liste und
-  // requestPort() wirft einen SecurityError.
   ses.setPermissionCheckHandler((webContents, permission) => permission === 'serial');
   ses.setPermissionRequestHandler((webContents, permission, callback) => {
     callback(permission === 'serial');
   });
-  ses.setDevicePermissionHandler((details) => details.deviceType === 'serial');
+  ses.setDevicePermissionHandler((details) =>
+    details.deviceType === 'serial' && granted.has(details.device.portId)
+  );
 
   win.loadFile(path.join(__dirname, 'index.html'));
 }
+
+// --- IPC und App-Lifecycle ----------------------------------------------
 
 ipcMain.on('serial:select', (event, portId) => resolveSelection(portId));
 
